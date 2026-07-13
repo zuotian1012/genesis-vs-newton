@@ -1,71 +1,73 @@
-# Genesis vs Newton Multi-Physics Demo Comparison
+# Genesis 与 Newton 多物理仿真 Demo 对比
 
-This repository compares **Genesis** and **Newton** by re-implementing and recording a set of classical multi-physics simulation demos on the same hardware platform.
+本仓库用于对比 **Genesis** 和 **Newton** 两个仿真平台在经典多物理 demo 上的实现效果。当前工作是在同一硬件环境下，分别用两个平台复现并录制刚体、机器人、软体、布料、流体和多物理耦合场景，从而判断后续工作更适合基于哪个平台继续展开。
 
-The current evaluation covers rigid bodies, robot control, inverse kinematics, soft bodies, cloth, fluids, MPM materials, and robot-cloth / robot-softbody coupling. All recorded demos in this repository were run on an **RTX 5090** machine.
+本轮 demo 均在 **RTX 5090** 机器上运行。
 
-## Project Goal
+## 项目目标
 
-The goal is to understand which simulation platform is more suitable for follow-up work by checking:
+本项目关注的不只是“视频能不能跑出来”，而是围绕以下几个问题进行平台评估：
 
-- whether both platforms can run representative classical demos;
-- which physical scenes and solver families each platform supports directly;
-- how efficient each implementation is in terms of code structure and setup cost;
-- how stable and visually convincing the results are under the same GPU configuration;
-- which platform is better suited for future work on robot manipulation, deformable objects, cloth, fluids, and multi-physics coupling.
+- 两个平台是否都能跑通代表性的经典 demo；
+- 刚体、软体、布料、流体等场景是否有直接支持；
+- 不同平台的求解器路线和适用场景有什么差异；
+- 实现过程中的代码结构、接口复杂度和调参成本如何；
+- 在同样 GPU 配置下，仿真效果、稳定性和交互复杂度表现如何；
+- 后续如果继续做机器人操作、可变形物体、布料、流体和多物理耦合，哪个平台更合适。
 
-## Main Report
+## 完整报告
 
-The full comparison report is here:
+完整对比报告见：
 
-[Open the full report](report.md)
+[打开完整报告](report.md)
 
-GitHub does not reliably render embedded local `.mp4` files in Markdown, so the report uses clickable thumbnails. Click any thumbnail in the report to open the corresponding demo video.
+说明：GitHub 的 Markdown 页面通常不会直接内嵌播放仓库中的本地 `.mp4` 文件。因此，报告中使用“缩略图 + 视频链接”的形式展示 demo。点击报告中的任意缩略图，即可打开对应的视频文件。
 
-## Repository Structure
+## 仓库结构
 
 ```text
 .
-├── report.md              # Main comparison report with clickable video thumbnails
+├── README.md              # 项目说明
+├── report.md              # 主报告，包含可点击的视频缩略图
 ├── video/
-│   ├── Genesis/           # Recorded Genesis demo videos
-│   └── Newton/            # Recorded Newton demo videos
+│   ├── Genesis/           # Genesis demo 录屏
+│   └── Newton/            # Newton demo 录屏
 ├── thumbnails/
-│   ├── Genesis/           # Preview images used by report.md
-│   └── Newton/            # Preview images used by report.md
-├── genesis-world/         # Genesis source checkout / reference implementation
-└── newton/                # Newton source checkout / reference implementation
+│   ├── Genesis/           # Genesis 视频缩略图
+│   └── Newton/            # Newton 视频缩略图
+├── genesis-world/         # Genesis 源码 / 示例参考
+└── newton/                # Newton 源码 / 示例参考
 ```
 
-## Demo Categories
+## 当前覆盖的 Demo 类型
 
-The current report compares the following scene families:
+当前报告覆盖以下场景：
 
-- rigid stacking and collision;
-- Franka rigid object grasping;
-- hinge and joint constraints;
-- robot joint control and inverse kinematics;
-- SPH free-surface liquid;
-- PBD particle liquid;
-- SPH / MPM / rigid coupling;
-- MPM multi-material simulation;
-- cloth hanging with fixed boundary constraints;
-- cloth-rigid collision;
-- Franka soft-body grasping;
-- FEM / VBD soft-body deformation;
-- robot cloth manipulation and T-shirt-style manipulation.
+- 刚体堆叠与碰撞；
+- Franka 抓取刚体；
+- 铰链与关节约束；
+- 机器人关节控制与逆运动学；
+- SPH 自由液面流体；
+- PBD 粒子液体；
+- SPH / MPM / 刚体耦合；
+- MPM 多材料仿真；
+- 固定边界布料下垂；
+- 布料与刚体碰撞；
+- Franka 抓取软体；
+- FEM / VBD 软体变形；
+- 机器人布料操作与 T-shirt 类衣物操作。
 
-## Video Naming Convention
+## 视频命名规范
 
-Videos are named to make the platform, physical category, demo task, and solver/material route visible from the filename.
+视频文件名采用较长但自解释的命名方式，方便只看文件名就判断其平台、物理类别、任务对象和主要求解器路线。
 
-Pattern:
+命名格式：
 
 ```text
 <platform>_<category>_<task/object>_<solver-or-material>_<detail>.mp4
 ```
 
-Examples:
+示例：
 
 ```text
 video/Genesis/genesis_fluid_sph_liquid_free_surface.mp4
@@ -74,21 +76,21 @@ video/Newton/newton_robot_franka_cloth_tshirt_manipulation.mp4
 video/Newton/newton_cloth_xpbd_hanging_fixed_edge.mp4
 ```
 
-Each video has a matching thumbnail with the same basename under `thumbnails/`.
+每个视频在 `thumbnails/` 下都有一个同名 `.jpg` 缩略图，用于在 GitHub 报告页面中显示预览。
 
-## Current Findings
+## 当前结论
 
-In this stage, **Genesis** is stronger as a fast, unified multi-physics prototyping platform. It provides direct and convenient demos for SPH liquid, PBD liquid, MPM, FEM, cloth, rigid bodies, and multiple coupling cases.
+从本轮实验看，**Genesis** 更适合作为快速、多类型、多物理 demo 的原型平台。它的接口统一，场景搭建速度快，对 SPH 液体、PBD 液体、MPM、FEM、布料、刚体以及多种耦合场景都有比较直接的示例入口。
 
-**Newton** is stronger for more engineering-oriented robot and deformable-object workflows. Its advantages are more visible in robot control, IK, VBD / XPBD / Style3D cloth, MPM material experiments, complex contact handling, and robot-cloth or robot-softbody manipulation.
+**Newton** 更适合偏工程化的机器人与可变形物体操作任务。它在机器人控制、IK、VBD / XPBD / Style3D 布料、MPM 材料实验、复杂接触、机器人-布料耦合和机器人-软体耦合方面更有优势，但整体实现和调参成本也更高。
 
-The practical recommendation from the current experiments is to use a **dual-platform strategy**:
+因此，当前更合理的策略是“双平台分工”：
 
-- use Genesis for broad multi-physics coverage, fast baselines, and fluid-heavy demos;
-- use Newton for robot-cloth, robot-softbody, garment manipulation, and solver-composition-heavy tasks.
+- 使用 Genesis 做多物理覆盖、快速 baseline 和流体相关 demo；
+- 使用 Newton 深入机器人-布料、机器人-软体、服装操作和复杂求解器组合任务。
 
-## Notes
+## 备注
 
-- The demo videos are committed directly in this repository for convenient review.
-- The thumbnails are generated from the videos so GitHub can display visual previews in `report.md`.
-- `.DS_Store` files are local macOS artifacts and are not part of the intended project content.
+- demo 视频已直接提交到仓库，方便在 GitHub 上查看；
+- 缩略图由对应视频自动截帧生成，用于改善 GitHub Markdown 的浏览体验；
+- `.DS_Store` 是 macOS 本地系统文件，不属于项目内容。
