@@ -1,0 +1,16 @@
+demo_key,video_file,scene_name,category,solver_label,module_or_file,class_name,default_args,robot_dof_override
+newton_rigid_collision_ball_pyramid,video/Newton/newton_rigid_collision_ball_pyramid.mp4,Rigid collision ball pyramid,rigid,XPBD rigid contact,newton.examples.contacts.example_pyramid,Example,,
+newton_robot_franka_pick_stack_cube,video/Newton/newton_robot_franka_pick_stack_cube.mp4,Franka pick stack cube,robot_rigid,MuJoCo rigid contact + IK,newton.examples.contacts.example_brick_stacking,Example,,9
+newton_rigid_joint_constraints_hinge,video/Newton/newton_rigid_joint_constraints_hinge.mp4,Rigid joint constraints hinge,rigid_joint,XPBD rigid constraints,newton.examples.basic.example_basic_joints,Example,,
+newton_robot_ur10_joint_control,video/Newton/newton_robot_ur10_joint_control.mp4,UR10 joint control,robot_control,MuJoCo robot joint control,newton.examples.robot.example_robot_ur10,Example,,
+newton_robot_franka_inverse_kinematics,video/Newton/newton_robot_franka_inverse_kinematics.mp4,Franka inverse kinematics,robot_control,Newton IK,newton.examples.ik.example_ik_franka,Example,,9
+newton_coupling_mpm_rigid_twoway,video/Newton/newton_coupling_mpm_rigid_twoway.mp4,MPM rigid two-way coupling,coupling,Implicit MPM + MuJoCo rigid,newton.examples.mpm.example_mpm_twoway_coupling,Example,,
+newton_mpm_liquid_viscous_flow,video/Newton/newton_mpm_liquid_viscous_flow.mp4,MPM liquid viscous flow,mpm,Implicit MPM viscous,newton.examples.mpm.example_mpm_viscous,Example,,
+newton_mpm_multi_material_demo,video/Newton/newton_mpm_multi_material_demo.mp4,MPM multi-material demo,mpm,Implicit MPM multi-material,newton.examples.mpm.example_mpm_multi_material,Example,,
+newton_cloth_xpbd_hanging_fixed_edge,video/Newton/newton_cloth_xpbd_hanging_fixed_edge.mp4,XPBD cloth hanging fixed edge,cloth,XPBD cloth,newton.examples.cloth.example_cloth_hanging,Example,--solver xpbd,
+newton_cloth_vbd_hanging_fixed_edge,video/Newton/newton_cloth_vbd_hanging_fixed_edge.mp4,VBD cloth hanging fixed edge,cloth,VBD cloth,newton.examples.cloth.example_cloth_hanging,Example,--solver vbd,
+newton_cloth_style3d_garment_demo,video/Newton/newton_cloth_style3d_garment_demo.mp4,Style3D garment demo,cloth,Style3D cloth,newton.examples.cloth.example_cloth_style3d,Example,,
+newton_cloth_rigid_collision,video/Newton/newton_cloth_rigid_collision.mp4,Cloth rigid collision,cloth_collision,VBD cloth + rigid collision,file:newton/cloth_on_rigid_custom.py,Example,,
+newton_robot_franka_grasp_softbody_vbd,video/Newton/newton_robot_franka_grasp_softbody_vbd.mp4,Franka grasp softbody VBD,robot_softbody,Featherstone robot + VBD soft body,newton.examples.softbody.example_softbody_franka,Example,,9
+newton_softbody_vbd_hanging_damping,video/Newton/newton_softbody_vbd_hanging_damping.mp4,Softbody VBD hanging damping,softbody,VBD soft body,newton.examples.softbody.example_softbody_hanging,Example,,
+newton_robot_franka_cloth_tshirt_manipulation,video/Newton/newton_robot_franka_cloth_tshirt_manipulation.mp4,Franka cloth T-shirt manipulation,robot_cloth,Featherstone robot + VBD cloth,newton.examples.cloth.example_cloth_franka,Example,,9
