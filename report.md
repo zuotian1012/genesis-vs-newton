@@ -1,251 +1,271 @@
 # Genesis 与 Newton 多物理仿真实现对比报告
 
-## 1. 工作目标与实验背景
+> 当前版本定位：**评估型报告模板**。现有视频用于证明 demo 已经跑通；静态场景参数已根据 `results/static_demo_stats.csv` 先行补齐，FPS、稳定性、实现成本和压力测试结论仍按 `NEXT_STEPS.md` 逐步补充。
 
-本阶段工作的目标，是在同一硬件环境下分别使用 Genesis 和 Newton 复现一组经典多物理仿真 demo，覆盖刚体、机器人、软体、布料、流体以及跨物理耦合场景。两套实验均在 RTX 5090 平台上运行，因此报告重点关注平台本身的场景支持能力、求解器路线、实现效率、视觉与物理效果，以及后续工作应优先选择哪一个平台继续深入。
+## 1. 评估目标
 
-本报告不是单纯的视频展示说明，而是围绕以下问题进行评估：
+本项目在同一硬件环境下使用 Genesis 和 Newton 分别复现一组经典多物理仿真 demo，覆盖刚体、机器人、软体、布料、流体以及多物理耦合场景。现阶段的现象覆盖已经比较完整，但仅展示“都能跑”还不足以支持平台选型。因此，下一阶段评估重点转向：
 
-- 两个平台是否都能跑通对应类型的 demo；
-- 对刚体、软体、布料、流体等经典场景的支持是否完整；
-- 实现时的代码组织、接口复杂度和调参成本如何；
-- 在同样 GPU 配置下，画面效果、稳定性和交互复杂度表现如何；
-- 对后续机器人操作、多物理耦合和复杂场景扩展，哪个平台更合适。
+- 哪些场景两个平台都能稳定完成；
+- 哪些场景能体现某个平台的短板或不适合方向；
+- 哪些场景能验证平台自己声称的独特优势；
+- 在 RTX 5090 上，各 demo 的仿真效率、场景规模和稳定性如何；
+- 后续如果做机器人可变形物操作、布料、流体或多物理耦合，应优先选择哪个平台。
 
-总体观察是：Genesis 更适合快速构建覆盖面广的多物理演示，接口统一，流体与多求解器组合更直观；Newton 更偏工程化和模块化，机器人控制、VBD/XPBD/Style3D 布料、复杂接触和可变形体操作能力更强，但实现门槛和调参复杂度更高。
+## 2. 统一实验环境
 
----
+| 项目 | 当前记录 |
+|---|---|
+| GPU | RTX 5090 |
+| CPU | [待补充] |
+| RAM | [待补充] |
+| OS | [待补充] |
+| CUDA / Driver | [待补充] |
+| Genesis commit | [待补充] |
+| Newton commit | [待补充] |
+| Python version | [待补充] |
+| 是否开启 viewer | [待补充：分别记录 viewer on / off] |
+| 是否录屏 | [待补充：recording on / off] |
 
-## 2. 刚体堆叠与碰撞
+> 后续 FPS 对比必须区分 **simulation-only FPS** 和 **viewer/render FPS**。录屏会影响性能，不能只用录屏时的体感速度作为最终结论。
 
-Genesis 的刚体塔示例展示了多刚体堆叠、接触稳定性、摩擦和碰撞传播。场景搭建直接，适合作为刚体求解器稳定性的入门验证。
+## 3. 评价指标定义
+
+| 指标 | 含义 | 记录方式 |
+|---|---|---|
+| Scene support | 平台是否能直接表达该场景 | `直接支持 / 需要改写 / 只能近似 / 暂不支持` |
+| Solver route | 使用的主要求解器或耦合方式 | 如 SPH、PBD、MPM、FEM、IPC、XPBD、VBD、Style3D、Featherstone |
+| Scene scale | 场景规模 | 刚体数、关节数、粒子数、顶点数、面片数、四面体数、机器人 DOF |
+| Simulation FPS | 不含渲染的平均仿真 FPS | warmup 后统计固定步数 wall time |
+| Viewer FPS | 开 viewer 时的平均显示 FPS | 单独统计，避免和 sim FPS 混在一起 |
+| Stability | 稳定性 | 是否爆炸、穿模、严重抖动、能量漂移、接触卡死 |
+| Implementation cost | 实现成本 | 代码行数、改动文件数、调参时间、API 复杂度 |
+| Visual quality | 视觉/物理效果 | 主观评分 + 典型失败截图/视频 |
+| Follow-up suitability | 后续适配性 | 是否适合继续做目标方向 |
+
+## 4. 当前现象覆盖总览
+
+| 场景类别 | Genesis 当前状态 | Newton 当前状态 | 初步差异 | 数据状态 |
+|---|---|---|---|---|
+| 刚体堆叠/碰撞 | 已跑通 | 已跑通 | Newton 更偏复杂碰撞网络；Genesis 更轻量 | 静态规模已补，FPS 待测 |
+| Franka 抓取刚体 | 已跑通 | 已跑通 | Newton 任务链更完整；Genesis 更易搭 | DOF 已补，FPS 待测 |
+| 铰链/关节约束 | 已跑通 | 已跑通 | Newton 关节类型展示更系统 | 部分 DOF 已补，FPS 待测 |
+| 机器人控制/IK | 已跑通 | 已跑通 | Newton IK 和控制链更细 | 部分 DOF 已补，FPS 待测 |
+| SPH 液体 | 已跑通 | [待补充：直接支持/近似/不支持] | Genesis 直接 SPH 更强 | Genesis 参数已补，Newton 对照待做 |
+| PBD 液体 | 已跑通 | [待补充：直接支持/近似/不支持] | Genesis PBD 液体入口更直接 | Genesis 参数已补，Newton 对照待做 |
+| MPM/刚体耦合 | 已跑通 | 已跑通 | Newton MPM 工程化较强；Genesis 求解器覆盖广 | 静态参数已补，FPS 待测 |
+| MPM 多材料 | 已跑通 | 已跑通 | Newton 更适合材料模型对比 | 材料/采样参数已补，FPS 待测 |
+| 布料下垂 | 已跑通 | 已跑通 | Newton 可比较 XPBD/VBD/Style3D | 顶点规模已补，FPS 待测 |
+| 布料-刚体接触 | 已跑通 | 已跑通 | 接触稳定性需要压力测试 | 顶点规模已补，自碰撞/穿模待测 |
+| 机器人抓软体 | 已跑通 | 已跑通 | Newton 更适合复杂机器人-软体管线 | 部分 DOF/solver 参数已补，FPS 待测 |
+| 软体悬挂 | 已跑通 | 已跑通 | Genesis 偏 FEM；Newton 偏 VBD | solver 参数已补，精确 tets 待补 |
+| 机器人布料操作 | 已跑通遥操作 | 已跑通 T-shirt 操作 | Newton 更接近自动化衣物操作 | solver/部分 DOF 已补，稳定性/FPS 待测 |
+
+## 5. 已知静态统计与待测指标
+
+本节根据 `results/static_demo_stats.csv` 回填已经能从源码静态确认的信息。`unknown` 表示当前源码或资产入口中无法直接确认，后续不要猜测；FPS、稳定性和实现成本仍需按 `NEXT_STEPS.md` 手工运行或最小 wrapper 补齐。
+
+| ID | 平台 | 场景 | 求解器路线 | 已知规模 / DOF | dt / substeps | solver iterations | viewer | FPS 状态 | sim FPS | 稳定性 | 备注 |
+|---|---|---|---|---|---|---|---|---|---:|---|---|
+| G01 | Genesis | 刚体塔堆叠 | Rigid | 约 100 个塔中 box + plane + 下落刚体；DOF unknown | 0.0015 / unknown | unknown | args.vis 默认 false | 可从 Genesis 终端记录 | [待记录] | [待测] | `num_stacks=50`，每层 2 个 box |
+| G02 | Genesis | 铰链门 | Rigid hinge joint | 1 个 hinge DOF | 0.01 / 4 | unknown | true | 可从 Genesis 终端记录 | [待记录] | [待测] | 自定义门框、门板和 hinge joint |
+| G03 | Genesis | Franka 抓取刚体 | Rigid + IK | Franka 9 DOF | 0.01 / unknown | unknown | args.vis 默认 false | 可从 Genesis 终端记录 | [待记录] | [待测] | 7 个 arm joints + 2 个 finger joints |
+| G04 | Genesis | 机器人关节控制 | Rigid + PD/velocity/force control | 机器人 9 DOF | 0.01 / unknown | unknown | true | 可从 Genesis 终端记录 | [待记录] | [待测] | 展示位置、速度、力控制 |
+| G05 | Genesis | SPH 自由液面 | SPH | particle size = 0.01；particle count unknown | 4e-3 / 10 | unknown | true | 可从 Genesis 终端记录 | [待记录] | [待测] | 液体粒子数需运行或读 entity 后确认 |
+| G06 | Genesis | PBD 液体 | PBD Liquid | particle count unknown | 2e-3 / unknown | density 10；viscosity 1 | args.vis 默认 false | 可从 Genesis 终端记录 | [待记录] | [待测] | 粒子数依赖场景采样 |
+| G07 | Genesis | SPH-刚体耦合 | SPH + Rigid coupling | particle count unknown；刚体数 unknown | 1e-2 / 10 | unknown | args.vis 默认 false | 可从 Genesis 终端记录 | [待记录] | [待测] | SPH 与刚体耦合路径明确 |
+| G08 | Genesis | MPM 沙土与轮子 | MPM Sand + Rigid coupling | grid_density = 64；max_particles = 200000 | 3e-3 / 10 | unknown | args.vis 默认 false | 可从 Genesis 终端记录 | [待记录] | [待测] | 颗粒材料与刚体轮交互 |
+| G09 | Genesis | MPM 多材料 | MPM Elastic/Liquid/ElastoPlastic | 3 个 MPM material object；particle count unknown | 4e-3 / 10 | unknown | true | 可从 Genesis 终端记录 | [待记录] | [待测] | 材料类别明确，采样粒子数待确认 |
+| G10 | Genesis | PBD 布料下垂 | PBD Cloth | 2 个 cloth.obj；每个 6400 vertices / 12482 faces | 4e-3 / 10 | unknown | true | 可从 Genesis 终端记录 | [待记录] | [待测] | mesh 统计来自 Genesis cloth asset |
+| G11 | Genesis | 布料-刚体接触 | PBD Cloth + Rigid coupling | 1 个 cloth.obj：6400 vertices / 12482 faces；particle_size = 1e-2 | 2e-3 / 10 | unknown | args.vis 默认 false | 可从 Genesis 终端记录 | [待记录] | [待测] | 布料资产分辨率已知 |
+| G12 | Genesis | Franka 抓软立方体 | MPM soft cube + Rigid Franka | grid_density = 128；particle count unknown；Franka 9 DOF | 5e-3 / 15 | unknown | args.vis 默认 false | 可从 Genesis 终端记录 | [待记录] | [待测] | 软体粒子数依赖 MPM 采样 |
+| G13 | Genesis | FEM 软体约束 | FEM implicit / explicit | vertex/tet count unknown | implicit: 1e-3 / 1；explicit: 1e-4 / 5 | unknown | args.vis 默认 false | 代码关闭终端 FPS | [待测] | [待测] | `show_FPS=False`，需最小 wrapper 或修改 profiling |
+| G14 | Genesis | IPC 布料遥操作 | IPC Cloth + Rigid Franka | 2 个 grid20x20 cloth mesh；Franka 9 DOF；4x4 rigid blocks | 0.02 / unknown | line search iterations = 8 | true | 可从 Genesis 终端记录 | [待记录] | [待测] | cloth 具体顶点数需读下载资产 |
+| N01 | Newton | 刚体金字塔碰撞 | XPBD rigid contact | 约 4200 boxes；DOF unknown | 0.001 / 10 | XPBD_ITERATIONS = 2 | true | 需最小 wrapper 或现有 benchmark 路径 | [待测] | [待测] | fps = 100，frame_dt = 0.01 |
+| N02 | Newton | Franka 抓取/堆叠刚体 | MuJoCo rigid/SDF + IK state machine | brick_count = 3；Franka 9 DOF | 1/960 / 16 | iterations = 15；ls_iterations = 100 | true | 需最小 wrapper | [待测] | [待测] | fps = 60 |
+| N03 | Newton | 基础关节约束 | XPBD/VBD articulated joints | 3 类 articulation visible；exact DOF unknown | 0.001 / 10 | VBD=2 if selected；XPBD unknown | true | 需最小 wrapper | [待测] | [待测] | revolute / prismatic / ball 示例明确 |
+| N04 | Newton | UR10 关节控制 | MuJoCo robot simulation | UR10 DOF 来自资产，静态 unknown | 0.002 / 10 | unknown | true | 需最小 wrapper | [待测] | [待测] | fps = 50，contacts disabled |
+| N05 | Newton | Franka IK | Analytic IK solver | Franka DOF 来自模型，静态 unknown | unknown / unknown | ik_iters = 24 | true | 需最小 wrapper | [待测] | [待测] | 该例主要测 IK，不是完整物理 step benchmark |
+| N06 | Newton | MPM-刚体双向耦合 | MPM + MuJoCo rigid coupling | 6 个 moving boxes + ground；bed grid 约 121x121x31 | 0.0025 / 4 | MPM max_iterations = 50 | true | 需最小 wrapper | [待测] | [待测] | fps = 100，voxel_size = 0.05 |
+| N07 | Newton | MPM 黏性流体 | MPM viscous material | voxel_size = 0.005；particle count depends on cone filter | 1/240 / 1 | max_iterations = 250 | true | 需最小 wrapper | [待测] | [待测] | fps 参数默认 240 |
+| N08 | Newton | MPM 多材料 | MPM multi-material | 4 个 particle grids；静态估计约 178669 points before filtering | 1/60 / 1 | max_iterations = 250 | true | 需最小 wrapper | [待测] | [待测] | sand / snow / mud / kinematic block |
+| N09a | Newton | XPBD 布料下垂 | XPBD Cloth | width=64 height=32；约 65x33=2145 vertices | 1/600 / 10 | iterations = 10 | true | 需最小 wrapper | [待测] | [待测] | 与 N09b 共用源码，不同 solver route |
+| N09b | Newton | VBD 布料下垂 | VBD Cloth | width=64 height=32；约 65x33=2145 vertices | 1/600 / 10 | iterations = 10 | true | 需最小 wrapper | [待测] | [待测] | 与 N09a 共用源码，不同 solver route |
+| N10 | Newton | Style3D 服装布料 | Style3D Cloth | garment mesh count unknown | 1/600 / 10 | iterations = 4 | true | 需最小 wrapper | [待测] | [待测] | Women_Sweatshirt USD 资产内部数量待读 |
+| N11 | Newton | 布料-刚体接触 | VBD Cloth + collision pipeline | cloth_resolution=40；约 41x41=1681 vertices；table + sphere + ground | 1/720 / 12 | iterations = 10 | true | 需最小 wrapper | [待测] | [待测] | 自定义 cloth_on_rigid 脚本 |
+| N12 | Newton | Franka 抓软体 | VBD Softbody + Featherstone Franka | tet mesh count unknown；robot DOF unknown | 1/600 / 10 | softbody iterations = 5；IK iters = 24 | true | 需最小 wrapper | [待测] | [待测] | rubber duck tet mesh 来自下载资产 |
+| N13 | Newton | VBD 软体悬挂 | VBD Softbody | 4 个 soft grids；dim_x=12 dim_y=4 dim_z=4；exact vertices/tets unknown | 1/600 / 10 | iterations = 10 | true | 需最小 wrapper | [待测] | [待测] | 精确拓扑依赖 add_soft_grid 实现 |
+| N14 | Newton | Franka T-shirt 操作 | VBD Cloth + Featherstone | garment mesh count unknown；robot DOF unknown | 1/600 / 10 | iterations = 5 | true | 需最小 wrapper | [待测] | [待测] | unisex_shirt.usd 资产内部数量待读 |
+
+## 6. 能体现平台短板/优势的新增测试
+
+| 测试编号 | 目标 | Genesis 预期 | Newton 预期 | 要验证的问题 | 结果占位 |
+|---|---|---|---|---|---|
+| S01 | 低黏度水体自由液面压力测试 | SPH/PBD 路线应更自然 | 可能需要 MPM 近似或缺少直接 SPH | Newton 是否能直接做 SPH/PBD 水；Genesis 水体效果与 FPS | [待补充] |
+| S02 | 水-刚体强耦合，如水流推动叶轮 | Genesis 有 SPH/MPM/刚体耦合基础 | Newton 可做 MPM-刚体，但水感可能不同 | 谁更适合水流驱动刚体 | [待补充] |
+| S03 | 多铰接刚体压力测试，50/100/200 个关节 | 验证统一建模和关节稳定性 | 验证 joint/constraint 系统工程能力 | 类似 Isaac Sim 多部件铰接场景谁更稳 | [待补充] |
+| S04 | 布料强自碰撞与尖锐刚体接触 | 验证 IPC/PBD/FEM 接触稳定性 | 验证 VBD/Style3D 自碰撞和接触 | 哪个平台穿模少、调参少 | [待补充] |
+| S05 | 机器人夹布料边缘并拖拽 | Genesis 能用 IPC teleop 验证 | Newton 更接近自动化 cloth manipulation | 机器人-布料任务谁更适合后续研究 | [待补充] |
+| S06 | 高分辨率布料/软体扩展测试 | 观察 FPS 下降与稳定性 | 观察 VBD/XPBD/Style3D 扩展性 | 顶点数翻倍后谁更稳、更快 | [待补充] |
+| S07 | 多求解器组合：机器人 + 刚体 + 布料 + 流体 | Genesis 统一 Scene 可能更方便 | Newton 组合更模块化但复杂 | 场景构建复杂度与可维护性 | [待补充] |
+
+## 7. 平台 claim 验证表
+
+| 平台 | 待验证 claim | 对应测试 | 评价方式 | 结果占位 |
+|---|---|---|---|---|
+| Genesis | 统一多物理接口降低 demo 构建成本 | 现有所有 demo + S07 | 代码行数、修改文件数、实现时间 | [待补充] |
+| Genesis | SPH/PBD/MPM/FEM/IPC 等求解器覆盖较完整 | G05-G14 + S01/S02/S04 | 直接支持程度、效果、FPS | [待补充] |
+| Genesis | IPC/接触在布料和机器人交互中有优势 | G14 + S04/S05 | 穿模率、接触稳定性、调参成本 | [待补充] |
+| Newton | 模块化求解器适合复杂机器人和可变形体任务 | N12/N14 + S05/S07 | 任务完整度、控制器可扩展性 | [待补充] |
+| Newton | VBD/XPBD/Style3D 布料路线丰富 | N10a/N10b/N10c + S04/S06 | 稳定性、视觉效果、FPS | [待补充] |
+| Newton | 机器人 IK/动力学/接触管线更工程化 | N02/N04/N14 | 任务链完整度、代码复杂度、可控性 | [待补充] |
+
+## 8. 现有 Demo 证据与初步观察
+
+### 8.1 刚体堆叠与碰撞
+
+Genesis 刚体塔：
 
 [![Open video: genesis_rigid_stack_tower](thumbnails/Genesis/genesis_rigid_stack_tower.jpg)](video/Genesis/genesis_rigid_stack_tower.mp4)
 
-Newton 的刚体碰撞示例展示刚体金字塔与破坏球冲击，冲击能量更高，接触数量更多，更能体现复杂接触网络下的约束求解能力。
+Newton 刚体金字塔碰撞：
 
 [![Open video: newton_rigid_collision_ball_pyramid](thumbnails/Newton/newton_rigid_collision_ball_pyramid.jpg)](video/Newton/newton_rigid_collision_ball_pyramid.mp4)
 
-**对比：** 两个平台都能稳定运行基础刚体 demo。Genesis 的实现更轻量、复现更快；Newton 的场景更强调高冲击和多接触条件下的刚体求解表现。若只是快速搭建刚体验证，Genesis 效率更高；若后续需要细分约束、接触参数和更复杂刚体系统，Newton 的工程接口更有扩展空间。
+初步观察：两者都能跑通基础刚体接触。下一步需要用 S03 的多铰接刚体压力测试进一步拉开差异。
 
----
+### 8.2 Franka 抓取刚体
 
-## 3. Franka 抓取刚体
-
-Genesis 使用 Franka Panda 抓取刚体立方体，展示机械臂 IK、夹爪闭合、物体接触和抓取后的提升过程。该 demo 的优点是流程清晰，接口统一，比较容易从示例扩展到其他刚体抓取任务。
+Genesis Franka 抓取立方体：
 
 [![Open video: genesis_robot_franka_pick_cube_rigid](thumbnails/Genesis/genesis_robot_franka_pick_cube_rigid.jpg)](video/Genesis/genesis_robot_franka_pick_cube_rigid.mp4)
 
-Newton 的 Franka 抓取与堆叠任务更复杂，通常包含 GPU IK、有限状态机、SDF 网格碰撞，以及接近、抓取、抬升、移动、放置、释放的完整任务链。
+Newton Franka 抓取/堆叠：
 
 [![Open video: newton_robot_franka_pick_stack_cube](thumbnails/Newton/newton_robot_franka_pick_stack_cube.jpg)](video/Newton/newton_robot_franka_pick_stack_cube.mp4)
 
-**对比：** 两个平台都能实现机械臂刚体操作。Genesis 更适合快速实现和调试抓取流程；Newton 的任务更接近完整机器人操作 pipeline，效果更丰富，但代码结构、状态机和碰撞设置的理解成本明显更高。
+初步观察：Genesis 更快搭建抓取流程；Newton 任务链更完整。后续需要补机器人 DOF、控制器类型、平均 FPS、代码量和调参时间。
 
----
+### 8.3 关节约束与机器人控制
 
-## 4. 铰链与关节约束刚体
-
-Genesis 的门铰链示例展示了典型转动关节对象，适合验证关节轴、关节限位、阻尼、驱动和刚体碰撞之间的协调。
+Genesis 铰链门：
 
 [![Open video: genesis_rigid_hinge_door_joint](thumbnails/Genesis/genesis_rigid_hinge_door_joint.jpg)](video/Genesis/genesis_rigid_hinge_door_joint.mp4)
 
-Newton 的基础关节示例覆盖 `REVOLUTE`、`PRISMATIC`、`BALL`、`DISTANCE` 等多种约束类型，更像是系统性关节/约束功能测试。
+Newton 关节约束：
 
 [![Open video: newton_rigid_joint_constraints_hinge](thumbnails/Newton/newton_rigid_joint_constraints_hinge.jpg)](video/Newton/newton_rigid_joint_constraints_hinge.mp4)
 
-**对比：** Genesis 的示例更应用导向；Newton 的约束系统展示更完整。若后续需要构造复杂机构、连杆系统或多关节约束，Newton 的表达能力更强；若只需要快速加入常见关节物体，Genesis 更直接。
-
----
-
-## 5. 机器人关节控制与逆运动学
-
-Genesis 示例展示机器人关节控制与基础运动能力，适合快速理解机器人实体、关节自由度和控制接口。
+Genesis 机器人控制：
 
 [![Open video: genesis_robot_joint_control_demo](thumbnails/Genesis/genesis_robot_joint_control_demo.jpg)](video/Genesis/genesis_robot_joint_control_demo.mp4)
 
-Newton 的 UR10 示例展示工业机械臂的关节运动和控制流程。
+Newton UR10 与 Franka IK：
 
 [![Open video: newton_robot_ur10_joint_control](thumbnails/Newton/newton_robot_ur10_joint_control.jpg)](video/Newton/newton_robot_ur10_joint_control.mp4)
 
-Newton 的 Franka IK 示例进一步展示末端目标跟踪和逆运动学求解。
-
 [![Open video: newton_robot_franka_inverse_kinematics](thumbnails/Newton/newton_robot_franka_inverse_kinematics.jpg)](video/Newton/newton_robot_franka_inverse_kinematics.mp4)
 
-**对比：** Genesis 的机器人控制接口更统一，适合快速做 demo；Newton 的机器人控制链路更细，IK、动力学、关节目标和控制器之间拆分更明确，更适合后续做复杂任务规划、精细控制和机器人-环境耦合。
+初步观察：Newton 在关节类型和 IK/控制管线展示上更系统；Genesis 更适合快速上手。S03 应加入大量铰接部件来验证差异。
 
----
+### 8.4 流体与颗粒
 
-## 6. SPH 液体自由面
-
-Genesis 提供 SPH 液体坍塌示例，能够直接展示自由液面流动、粒子水体扩散、边界碰撞以及低黏度流体效果。
+Genesis SPH 液体：
 
 [![Open video: genesis_fluid_sph_liquid_free_surface](thumbnails/Genesis/genesis_fluid_sph_liquid_free_surface.jpg)](video/Genesis/genesis_fluid_sph_liquid_free_surface.mp4)
 
-Newton 当前实现路线更集中在 MPM/粒子连续介质和 XPBD/VBD 等求解器上，并不以 SPH 自由液面水体作为主要流体 demo 路线。因此，在低黏度水体、水坝坍塌、飞溅和 SPH 水-刚体耦合这类任务上，Genesis 的直接支持更强。
-
-**对比：** 如果后续工作需要真实水感、自由液面或 SPH 风格流体，Genesis 是更自然的选择。Newton 可以做 MPM 流动材料，但它在该类 demo 中表现出的技术路线不是 SPH 水模拟。
-
----
-
-## 7. PBD 液体
-
-Genesis 提供 PBD 液体示例，用位置约束方式表现粒子流体的整体流动、碰撞和体积保持。
+Genesis PBD 液体：
 
 [![Open video: genesis_fluid_pbd_liquid_particles](thumbnails/Genesis/genesis_fluid_pbd_liquid_particles.jpg)](video/Genesis/genesis_fluid_pbd_liquid_particles.mp4)
 
-Newton 虽然有 XPBD 求解器，但本轮实现中液体类效果主要通过 MPM 路线完成，而不是直接复现 Genesis 的 PBD 液体。对于希望快速比较 PBD/SPH/MPM 多种流体方法的工作，Genesis 的求解器谱系更完整。
-
-**对比：** Genesis 在流体求解器覆盖面上更有优势；Newton 更适合把流动材料纳入 MPM 或多物理耦合框架，而不是作为 PBD 液体 demo 平台。
-
----
-
-## 8. 流体、颗粒与刚体耦合
-
-Genesis 的 SPH-刚体耦合展示粒子流体与刚体之间的双向作用，可观察流体冲击、刚体受力和反馈运动。
+Genesis SPH-刚体耦合与 MPM 沙土：
 
 [![Open video: genesis_coupling_sph_liquid_rigid](thumbnails/Genesis/genesis_coupling_sph_liquid_rigid.jpg)](video/Genesis/genesis_coupling_sph_liquid_rigid.mp4)
 
-Genesis 的 MPM 沙土示例展示颗粒材料的堆积、流散和塑性变形。
-
 [![Open video: genesis_mpm_sand_granular](thumbnails/Genesis/genesis_mpm_sand_granular.jpg)](video/Genesis/genesis_mpm_sand_granular.mp4)
 
-Newton 的 MPM-刚体耦合示例展示 MPM 材料与刚体的双向交互，重点在于 MPM 粒子对刚体施力，以及刚体运动对材料形态的反馈。
+Newton MPM-刚体耦合与 MPM 流体：
 
 [![Open video: newton_coupling_mpm_rigid_twoway](thumbnails/Newton/newton_coupling_mpm_rigid_twoway.jpg)](video/Newton/newton_coupling_mpm_rigid_twoway.mp4)
 
-Newton 的 MPM 流体视频展示高黏度或连续介质材料的流动效果。
-
 [![Open video: newton_mpm_liquid_viscous_flow](thumbnails/Newton/newton_mpm_liquid_viscous_flow.jpg)](video/Newton/newton_mpm_liquid_viscous_flow.mp4)
 
-**对比：** Genesis 同时覆盖 SPH 与 MPM，流体/颗粒/刚体耦合路径更完整；Newton 的 MPM 耦合工程化程度更高，更适合连续介质、颗粒材料和刚体相互作用。若后续目标是“水”和“低黏度液体”，Genesis 更合适；若目标是沙、泥、软材料或 MPM-刚体作用，Newton 值得继续深入。
+初步观察：Genesis 在 SPH/PBD 低黏度流体上更直接；Newton 的 MPM 更适合连续介质/高黏度材料/颗粒。S01/S02 应专门验证 Newton 是否能直接复现水体类效果。
 
----
+### 8.5 MPM 多材料
 
-## 9. MPM 多材料模拟
-
-Genesis 的 MPM 示例展示基础连续介质、液体和弹塑性材料行为，适合快速验证 MPM 求解器是否可用。
+Genesis MPM：
 
 [![Open video: genesis_mpm_elastic_liquid_plastic_demo](thumbnails/Genesis/genesis_mpm_elastic_liquid_plastic_demo.jpg)](video/Genesis/genesis_mpm_elastic_liquid_plastic_demo.mp4)
 
-Newton 的 MPM 多材料示例更强调不同材料模型在统一框架下的组合与对比，例如颗粒、黏塑性材料、高黏度材料或不同本构参数下的形变差异。
+Newton MPM 多材料：
 
 [![Open video: newton_mpm_multi_material_demo](thumbnails/Newton/newton_mpm_multi_material_demo.jpg)](video/Newton/newton_mpm_multi_material_demo.mp4)
 
-**对比：** 两个平台都能跑通 MPM demo。Genesis 更适合快速入门和可视化演示；Newton 的 MPM 路线更偏材料库和工程参数实验，后续若需要系统比较材料模型，Newton 的扩展空间更好。
+初步观察：两者都能跑 MPM。下一步需要补材料参数、粒子数、FPS 和不同材料在同一框架下的可扩展性。
 
----
+### 8.6 布料
 
-## 10. 固定一侧的下垂布料
-
-Genesis 的 PBD 布料示例展示布料在固定边界下的下垂、振荡和稳定过程。
+Genesis PBD 布料：
 
 [![Open video: genesis_cloth_pbd_hanging_fixed_edge](thumbnails/Genesis/genesis_cloth_pbd_hanging_fixed_edge.jpg)](video/Genesis/genesis_cloth_pbd_hanging_fixed_edge.mp4)
 
-Newton 提供多条布料求解路线。XPBD 布料强调约束稳定性和实时性。
+Newton XPBD / VBD / Style3D 布料：
 
 [![Open video: newton_cloth_xpbd_hanging_fixed_edge](thumbnails/Newton/newton_cloth_xpbd_hanging_fixed_edge.jpg)](video/Newton/newton_cloth_xpbd_hanging_fixed_edge.mp4)
 
-VBD 布料强调可变形体求解下的稳定接触和变形表现。
-
 [![Open video: newton_cloth_vbd_hanging_fixed_edge](thumbnails/Newton/newton_cloth_vbd_hanging_fixed_edge.jpg)](video/Newton/newton_cloth_vbd_hanging_fixed_edge.mp4)
-
-Style3D 布料更偏高质量服装/布料仿真工作流。
 
 [![Open video: newton_cloth_style3d_garment_demo](thumbnails/Newton/newton_cloth_style3d_garment_demo.jpg)](video/Newton/newton_cloth_style3d_garment_demo.mp4)
 
-**对比：** 布料是 Newton 表现较强的方向。Genesis 的 PBD 布料实现简单、复现快；Newton 可以在 XPBD、VBD 和 Style3D 之间比较求解器效果，适合研究布料精度、稳定性和服装级仿真。不过 Newton 的配置项更多，前期调参和理解成本更高。
-
----
-
-## 11. 布料与刚体碰撞
-
-Genesis 展示布料落在刚体上的接触与包覆行为，重点是布料网格与刚体表面之间的碰撞稳定性。
+Genesis / Newton 布料-刚体接触：
 
 [![Open video: genesis_cloth_rigid_collision](thumbnails/Genesis/genesis_cloth_rigid_collision.jpg)](video/Genesis/genesis_cloth_rigid_collision.mp4)
 
-Newton 对应视频展示布料落到刚体平台上的过程，可观察折弯、接触、滑动和碰撞响应。
-
 [![Open video: newton_cloth_rigid_collision](thumbnails/Newton/newton_cloth_rigid_collision.jpg)](video/Newton/newton_cloth_rigid_collision.mp4)
 
-**对比：** 两个平台都能实现布料-刚体碰撞。Genesis 的场景写法更直接；Newton 的优势在于可以进一步切换求解器、控制接触边界和自碰撞设置，适合对布料接触做更深入调试。
+初步观察：Newton 的布料求解器路线更丰富；Genesis 更快搭建基础布料。S04/S06 需要做高分辨率、自碰撞和强接触压力测试。
 
----
+### 8.7 软体与机器人-可变形体操作
 
-## 12. 机械臂抓取软体
-
-Genesis 使用 Franka 抓取软立方体，展示机械臂、夹爪与软体物体之间的耦合接触。
+Genesis Franka 抓软立方体：
 
 [![Open video: genesis_robot_franka_grasp_soft_cube_mpm](thumbnails/Genesis/genesis_robot_franka_grasp_soft_cube_mpm.jpg)](video/Genesis/genesis_robot_franka_grasp_soft_cube_mpm.mp4)
 
-Newton 使用 Franka 抓取软体物体，通常依赖 VBD 四面体软体、机器人积分和 IK 控制共同完成任务。
+Newton Franka 抓软体：
 
 [![Open video: newton_robot_franka_grasp_softbody_vbd](thumbnails/Newton/newton_robot_franka_grasp_softbody_vbd.jpg)](video/Newton/newton_robot_franka_grasp_softbody_vbd.mp4)
 
-**对比：** 两个平台都能完成机器人-软体交互。Genesis 更适合作为软体抓取快速原型；Newton 在软体网格、机器人控制、接触管线和可变形体求解方面更细，适合后续扩展为复杂可变形物操作任务。
-
----
-
-## 13. 软体悬挂与 FEM/VBD 表现
-
-Genesis 的 FEM 示例展示软体在约束、重力和弹性材料作用下的变形行为，可用于观察软体有限元求解、边界固定和材料参数对变形的影响。
+Genesis FEM 软体与 Newton VBD 软体：
 
 [![Open video: genesis_softbody_fem_deformation](thumbnails/Genesis/genesis_softbody_fem_deformation.jpg)](video/Genesis/genesis_softbody_fem_deformation.mp4)
 
-Newton 的 VBD 软体示例展示四面体软体在固定边界和不同阻尼设置下的下垂、振荡与稳定过程。
-
 [![Open video: newton_softbody_vbd_hanging_damping](thumbnails/Newton/newton_softbody_vbd_hanging_damping.jpg)](video/Newton/newton_softbody_vbd_hanging_damping.mp4)
 
-**对比：** Genesis 更接近传统 FEM 软体演示，便于教学和快速观察材料变形；Newton 的 VBD 更强调稳定、可组合以及与机器人/接触系统集成。若后续重点是软体材料本身，Genesis 更直观；若重点是软体与机器人、刚体、布料的复杂交互，Newton 更适合继续投入。
-
----
-
-## 14. 机器人布料操作与叠衣服
-
-Genesis 提供 IPC 布料遥操作示例，通过键盘控制 Franka 移动、抓取布料并完成交互。该示例体现 Genesis 在机器人、IPC 接触和布料耦合上的可运行性，但任务本身更偏人工遥操作流程。
+机器人布料操作：
 
 [![Open video: genesis_robot_franka_ipc_cloth_teleop](thumbnails/Genesis/genesis_robot_franka_ipc_cloth_teleop.jpg)](video/Genesis/genesis_robot_franka_ipc_cloth_teleop.mp4)
 
-Newton 的 Franka-布料示例使用 VBD 求解布料、Featherstone 求解机器人，并显式处理机器人-布料接触、自碰撞、厘米尺度仿真与可视化尺度转换。该类实现更接近自动化机器人布料操作或叠衣服任务所需的工程结构。
-
 [![Open video: newton_robot_franka_cloth_tshirt_manipulation](thumbnails/Newton/newton_robot_franka_cloth_tshirt_manipulation.jpg)](video/Newton/newton_robot_franka_cloth_tshirt_manipulation.mp4)
 
-**对比：** 这是 Newton 相对 Genesis 更有优势的场景之一。Genesis 能跑通机器人与布料交互，接口更统一；Newton 的实现更复杂，但对 T-shirt 这类真实服装网格、机器人控制、布料自碰撞和复杂接触的支持更系统。若后续工作要继续做机器人叠衣服、衣物整理或可变形物操作，Newton 更值得优先考虑。
+初步观察：机器人-布料/软体任务是 Newton 值得重点深入的方向；Genesis 的优势是统一接口和 IPC/多物理覆盖。后续重点补 S05/S07。
 
----
+## 9. 当前阶段结论占位
 
-# 平台能力总结与后续选择建议
+| 结论问题 | 当前初步判断 | 需要补的数据 |
+|---|---|---|
+| 哪个平台更适合快速覆盖多物理 demo？ | Genesis 暂时更优 | 代码量、实现时间、场景构建步骤 |
+| 哪个平台更适合流体？ | Genesis 在 SPH/PBD 液体更优；Newton MPM 材料更强 | S01/S02 FPS 与视觉对照 |
+| 哪个平台更适合布料？ | Newton 求解器路线更丰富；Genesis 更快搭 | S04/S06 自碰撞、强接触、高分辨率测试 |
+| 哪个平台更适合机器人可变形物操作？ | Newton 暂时更优 | S05 任务成功率、接触稳定性、FPS |
+| 哪个平台更适合复杂铰接刚体？ | [待补充] | S03 多关节压力测试 |
+| 是否建议双平台分工？ | 暂时建议 Genesis 做覆盖/流体，Newton 做机器人-布料/软体 | 完成量化表后更新 |
 
-## 1. 场景覆盖
+## 10. 下一步
 
-Genesis 覆盖面更均衡：刚体、机器人、SPH 液体、PBD 液体、MPM、FEM、布料和多物理耦合都有较直接的示例入口。对于“先确认平台能不能跑经典 demo”这一阶段，Genesis 的效率很高。
+下一步工作按 `NEXT_STEPS.md` 执行，优先级如下：
 
-Newton 覆盖方向更集中：刚体、机器人、IK、XPBD/VBD/Style3D 布料、VBD 软体、Implicit MPM、多求解器耦合和机器人可变形体操作。它不是流体求解器覆盖最完整的平台，但在机器人和可变形体交互方面更强。
-
-## 2. 实现效率
-
-Genesis 的优势是统一 `Scene`、实体添加和 `scene.step()` 风格，快速复现实验更省时间。大多数 demo 的代码逻辑更直观，适合教学展示和快速搭建 baseline。
-
-Newton 的实现通常需要显式管理 `ModelBuilder`、solver、state、control、collision pipeline、visualization state 等模块。初期实现效率较低，但一旦理解框架，复杂任务的可控性和可扩展性更好。
-
-## 3. 实现效果
-
-在刚体、基础机器人、布料下垂、软体变形等常规 demo 上，两者都能跑通。Genesis 的效果优势在于流体和多求解器组合展示更直观；Newton 的效果优势在于布料/软体接触更细、机器人操作任务更完整，尤其是 Franka 与 T-shirt 布料交互这类复杂场景。
-
-## 4. 求解器路线
-
-Genesis 当前对本组 demo 的覆盖包括刚体、SPH、PBD、MPM、FEM、IPC/布料耦合等，适合比较不同物理求解器在同一平台中的表现。
-
-Newton 当前对本组 demo 的覆盖主要包括 XPBD、VBD、Style3D、Implicit MPM、Featherstone/MuJoCo 机器人动力学和多求解器耦合。它的优势不是“所有物理类型都有最直接入口”，而是把机器人、布料、软体和复杂接触组织成更工程化的系统。
-
-## 5. 在 RTX 5090 上的工作感受
-
-在 5090 上，两个平台的这些 demo 都具备运行条件，硬件不是当前阶段的主要瓶颈。真正影响后续效率的是平台抽象层和求解器适配成本：Genesis 更快形成可视化结果；Newton 更适合把复杂任务拆成可控模块，但需要更多调参、尺度处理和状态管理。
-
-## 6. 建议
-
-如果后续目标是快速扩展经典多物理 demo、覆盖更多流体/软体/刚体组合，或做课程展示型对比，建议优先选择 Genesis。
-
-如果后续目标是机器人叠衣服、机器人操作可变形物、复杂布料接触、服装级仿真或需要精细控制器与求解器组合，建议优先选择 Newton。
-
-综合当前实验结果，可以采用“双平台分工”的策略：Genesis 作为多物理现象覆盖和快速原型平台，Newton 作为机器人-布料/软体复杂操作的重点深入平台。这样既能保留 Genesis 在流体和统一接口上的优势，也能利用 Newton 在复杂机器人可变形体任务上的工程能力。
+1. 为所有现有 demo 补齐场景规模和 FPS；
+2. 新增 4 个高区分度压力测试：低黏度流体、多铰接刚体、布料强接触、机器人布料拖拽；
+3. 把所有结果回填第 5、6、7、9 节；
+4. 根据量化数据更新最终平台选型建议。
