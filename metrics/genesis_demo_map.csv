@@ -1,0 +1,15 @@
+demo_key,video_file,scene_name,category,solver_label,script_path,default_args,robot_dof_override
+genesis_rigid_stack_tower,video/Genesis/genesis_rigid_stack_tower.mp4,Rigid stack tower,rigid,Rigid,genesis-world/examples/collision/tower.py,,
+genesis_rigid_hinge_door_joint,video/Genesis/genesis_rigid_hinge_door_joint.mp4,Hinge door joint,rigid_joint,Rigid joint,genesis-world/examples/hinge_door_demo.py,,
+genesis_robot_franka_pick_cube_rigid,video/Genesis/genesis_robot_franka_pick_cube_rigid.mp4,Franka pick rigid cube,robot_rigid,Rigid + robot IK,genesis-world/examples/rigid/franka_cube.py,,9
+genesis_robot_joint_control_demo,video/Genesis/genesis_robot_joint_control_demo.mp4,Robot joint control demo,robot_control,Robot joint control,genesis-world/examples/tutorials/control_your_robot.py,,9
+genesis_fluid_sph_liquid_free_surface,video/Genesis/genesis_fluid_sph_liquid_free_surface.mp4,SPH liquid free surface,fluid,SPH,genesis-world/examples/tutorials/sph_liquid.py,,
+genesis_fluid_pbd_liquid_particles,video/Genesis/genesis_fluid_pbd_liquid_particles.mp4,PBD liquid particles,fluid,PBD particles,genesis-world/examples/pbd_liquid.py,,
+genesis_coupling_sph_liquid_rigid,video/Genesis/genesis_coupling_sph_liquid_rigid.mp4,SPH liquid rigid coupling,coupling,SPH + rigid coupling,genesis-world/examples/coupling/sph_rigid.py,,
+genesis_mpm_sand_granular,video/Genesis/genesis_mpm_sand_granular.mp4,MPM sand granular,mpm,MPM granular,genesis-world/examples/coupling/sand_wheel.py,,
+genesis_mpm_elastic_liquid_plastic_demo,video/Genesis/genesis_mpm_elastic_liquid_plastic_demo.mp4,MPM elastic liquid plastic demo,mpm,MPM multi-material,genesis-world/examples/tutorials/mpm.py,,
+genesis_cloth_pbd_hanging_fixed_edge,video/Genesis/genesis_cloth_pbd_hanging_fixed_edge.mp4,PBD cloth hanging fixed edge,cloth,PBD cloth,genesis-world/examples/tutorials/pbd_cloth.py,,
+genesis_cloth_rigid_collision,video/Genesis/genesis_cloth_rigid_collision.mp4,Cloth rigid collision,cloth_collision,Cloth + rigid coupling,genesis-world/examples/coupling/cloth_on_rigid.py,,
+genesis_robot_franka_grasp_soft_cube_mpm,video/Genesis/genesis_robot_franka_grasp_soft_cube_mpm.mp4,Franka grasp soft cube MPM,robot_softbody,Robot + MPM soft body,genesis-world/examples/coupling/grasp_soft_cube.py,,9
+genesis_softbody_fem_deformation,video/Genesis/genesis_softbody_fem_deformation.mp4,Softbody FEM deformation,softbody,FEM,genesis-world/examples/fem_hard_and_soft_constraint.py,,
+genesis_robot_franka_ipc_cloth_teleop,video/Genesis/genesis_robot_franka_ipc_cloth_teleop.mp4,Franka IPC cloth teleop,robot_cloth,IPC cloth + robot teleop,genesis-world/examples/IPC_Solver/ipc_robot_cloth_teleop.py,,9

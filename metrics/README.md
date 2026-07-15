@@ -64,3 +64,36 @@ python metrics\measure_newton_demo.py newton_robot_franka_cloth_tshirt_manipulat
 ```
 
 The script matches rows by `video_file` when writing back to `scene_metrics.csv`, so Genesis and Newton scenes may safely share the same `scene_name`.
+
+## Genesis Measurement
+
+Genesis demo mappings are stored in `genesis_demo_map.csv`.
+
+Run these commands from the repository root in the `genesis` conda environment.
+
+List available Genesis demo keys:
+
+```powershell
+conda activate genesis
+python metrics\measure_genesis_demo.py --list
+```
+
+Measure one demo and update `scene_metrics.csv`:
+
+```powershell
+python metrics\measure_genesis_demo.py genesis_rigid_stack_tower --update-csv
+```
+
+Use shorter runs for expensive particle, cloth, MPM, FEM, or IPC demos:
+
+```powershell
+python metrics\measure_genesis_demo.py genesis_mpm_sand_granular --warmup-steps 10 --measured-steps 50 --update-csv
+```
+
+The Genesis runner executes the original example script, temporarily disables the viewer, times only post-build `scene.step()` calls, and writes results back by matching `video_file`.
+
+Current caveat: `genesis_robot_franka_ipc_cloth_teleop` fails on the original CPU backend in this Windows environment with an LLVM `IMAGE_REL_AMD64_ADDR32NB relocation` error. Measure it with the GPU backend override:
+
+```powershell
+python metrics\measure_genesis_demo.py genesis_robot_franka_ipc_cloth_teleop --force-backend gpu --warmup-steps 10 --measured-steps 50 --update-csv
+```

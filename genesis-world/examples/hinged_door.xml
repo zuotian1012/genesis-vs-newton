@@ -1,0 +1,41 @@
+
+<mujoco model="genesis_hinged_door">
+  <compiler angle="degree" autolimits="true"/>
+
+  <option gravity="0 0 -9.81"/>
+
+  <worldbody>
+    <!-- 没有 joint 的根 body 固定在世界坐标系中 -->
+    <body name="door_frame">
+      <geom
+        name="frame_post"
+        type="box"
+        pos="0 0 0.60"
+        size="0.05 0.05 0.60"
+        rgba="0.25 0.25 0.30 1"
+      />
+
+      <!-- child body 通过一个 revolute/hinge joint 连接 -->
+      <body name="door" pos="0.08 0 0.60">
+        <joint
+          name="door_hinge"
+          type="hinge"
+          axis="0 0 1"
+          limited="true"
+          range="-100 100"
+          damping="1.0"
+          armature="0.02"
+        />
+
+        <geom
+          name="door_panel"
+          type="box"
+          pos="0.45 0 0"
+          size="0.45 0.035 0.55"
+          density="500"
+          rgba="0.80 0.30 0.15 1"
+        />
+      </body>
+    </body>
+  </worldbody>
+</mujoco>
